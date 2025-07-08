@@ -3,6 +3,6 @@
 @echo off
 mkdir .\build
 pushd .\build
-cl -FC -Zi ..\src\main.c
-main.exe
+cl /utf-8 /FC /Zi ..\src\main.c
+@REM main.exe
 popd

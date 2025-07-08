@@ -1,4 +1,4 @@
-#include "lua.c"
+#include "luaaux.h"
 
 static int add_op(struct lua_State *L)
 {
@@ -14,7 +14,7 @@ int main(int argc, char **argv)
     luaL_pushcfunction(L, &add_op);
     luaL_pushinteger(L, 1);
     luaL_pushinteger(L, 1);
-    lua_pcall(L, 2, 1, 0);
+    lua_pcall(L, 2, 1);  // 虚拟机实例 L, 被调用函数有几个参数，几个返回值，
 
     int result = luaL_tointeger(L, -1);
     printf("result is %d\n", result);
@@ -22,5 +22,6 @@ int main(int argc, char **argv)
     printf("final stack size %d\n", luaL_stacksize(L));
 
     luaL_close(L);
+    system("pause");
     return 0;
 }
