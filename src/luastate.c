@@ -1,6 +1,8 @@
 #include "luastate.h"
+#include "luamem.h"
 
-#define fromstate(L) (cast(LX *, cast(lu_byte *, (L)) - offsetof(LX, l)))
+// 先把L转换成 byte*, 然后减去L在LX中的偏移量，得到LX的指针，就相当于LG指针
+#define fromstate(L) (cast(LG *, cast(lu_byte *, (L)) - offsetof(LX, l)))
 
 typedef struct LX
 {
@@ -25,8 +27,7 @@ static void stack_init(struct lua_State *L)
     L->top = L->stack;
     L->errorfunc = 0;
 
-    int i;
-    for (i = 0; i < L->stack_size; i++)
+    for (int i = 0; i < L->stack_size; i++)
     {
         setnilvalue(L->stack + i);
     }
@@ -35,7 +36,8 @@ static void stack_init(struct lua_State *L)
     L->ci = &L->base_ci;
     L->ci->func = L->stack;
     L->ci->top = L->stack + LUA_MINSTACK;
-    L->ci->previous = L->ci->next = NULL;
+    L->ci->previous = NULL;
+    L->ci->next = NULL;
 }
 
 static void free_stack(struct lua_State *L)
@@ -74,6 +76,7 @@ void lua_close(struct lua_State *L)
     struct global_State *g = G(L);
     struct lua_State *L1 = g->mainthread; // only mainthread can be close
 
+    // 释放CallInfo
     struct CallInfo *ci = &L1->base_ci;
     // 不释放base_ci
     while (ci->next)
@@ -85,7 +88,10 @@ void lua_close(struct lua_State *L)
         ci = next;
     }
 
+    // 释放栈空间
     free_stack(L1);
+
+    // 释放全局状态
     (*g->frealloc)(g->ud, fromstate(L1), sizeof(LG), 0);
 }
 

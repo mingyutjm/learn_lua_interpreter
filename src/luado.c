@@ -1,17 +1,19 @@
 #include "luado.h"
 #include "luamem.h"
 
+// c需要是一个lua_longjmp
 #define LUA_TRY(L, c, a)      \
     if (_setjmp((c)->b) == 0) \
     {                         \
         a                     \
     }
 
-#ifdef _WINDOWS_PLATFORM_
+// #ifdef _WINDOWS_PLATFORM_
+// #define LUA_THROW(c) longjmp((c)->b, 1)
+// #else
+// #define LUA_THROW(c) _longjmp((c)->b, 1)
+// #endif
 #define LUA_THROW(c) longjmp((c)->b, 1)
-#else
-#define LUA_THROW(c) _longjmp((c)->b, 1)
-#endif
 
 struct lua_longjmp
 {
@@ -94,6 +96,24 @@ void luaD_throw(struct lua_State *L, int error)
     }
 }
 
+int luaD_rawrunprotected(struct lua_State *L, Pfunc f, void *ud)
+{
+    int old_ncalls = L->ncalls;
+    struct lua_longjmp lj;
+    lj.previous = L->errorjmp;
+    lj.status = LUA_OK;
+    L->errorjmp = &lj;
+
+    LUA_TRY(
+        L,
+        L->errorjmp,
+        (*f)(L, ud);)
+
+    L->errorjmp = lj.previous;
+    L->ncalls = old_ncalls;
+    return lj.status;
+}
+
 // 构造一个 CallInfo
 static struct CallInfo *next_ci(struct lua_State *L, StkId func, int nresult)
 {
@@ -126,6 +146,59 @@ int luaD_call(struct lua_State *L, StkId func, int nresult)
 
     L->ncalls--;
     return LUA_OK;
+}
+
+static void reset_unuse_stack(struct lua_State *L, ptrdiff_t old_top)
+{
+    struct global_State *g = G(L);
+    StkId top = restorestack(L, old_top);
+    for (; top < L->top; top++)
+    {
+        if (top->value_.p)
+        {
+            (*g->frealloc)(g->ud, top->value_.p, sizeof(top->value_.p), 0);
+            top->value_.p = NULL;
+        }
+        top->tt_ = LUA_TNIL;
+    }
+}
+
+int luaD_pcall(struct lua_State *L, Pfunc f, void *ud, ptrdiff_t oldtop, ptrdiff_t ef)
+{
+    int status;
+    struct CallInfo *old_ci = L->ci;
+    ptrdiff_t old_errorfunc = L->errorfunc;
+
+    status = luaD_rawrunprotected(L, f, ud);
+    if (status != LUA_OK)
+    {
+        // because we have not implement gc, so we should free ci manually
+        struct global_State *g = G(L);
+        struct CallInfo *free_ci = L->ci;
+        while (free_ci)
+        {
+            if (free_ci == old_ci)
+            {
+                free_ci = free_ci->next;
+                continue;
+            }
+
+            struct CallInfo *previous = free_ci->previous;
+            previous->next = NULL;
+
+            struct CallInfo *next = free_ci->next;
+            (*g->frealloc)(g->ud, free_ci, sizeof(struct CallInfo), 0);
+            free_ci = next;
+        }
+
+        reset_unuse_stack(L, oldtop);
+        L->ci = old_ci;
+        L->top = restorestack(L, oldtop);
+        seterrobj(L, status);
+    }
+
+    L->errorfunc = old_errorfunc;
+    return status;
 }
 
 // prepare for function call.

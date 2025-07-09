@@ -6,7 +6,7 @@
 #define LUA_EXTRASPACE sizeof(void *)
 #define G(L) ((L)->l_G)
 
-typedef TValue *StkId;
+typedef TValue* StkId;
 
 struct CallInfo
 {

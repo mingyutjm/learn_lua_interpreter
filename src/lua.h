@@ -58,6 +58,7 @@
 
 #define cast(t, exp) ((t)(exp))
 // #define savestack(L, o) ((o) - (L)->stack)
+#define diststack(L, o) ((o) - (L)->stack) // 到栈底部的距离
 #define restorestack(L, o) ((L)->stack + (o))
 
 #endif
