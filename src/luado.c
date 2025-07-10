@@ -154,11 +154,12 @@ static void reset_unuse_stack(struct lua_State *L, ptrdiff_t old_top)
     StkId top = restorestack(L, old_top);
     for (; top < L->top; top++)
     {
-        if (top->value_.p)
-        {
-            (*g->frealloc)(g->ud, top->value_.p, sizeof(top->value_.p), 0);
-            top->value_.p = NULL;
-        }
+        // if (top->value_.p)
+        // {
+        //     (*g->frealloc)(g->ud, top->value_.p, sizeof(top->value_.p), 0);
+        //     top->value_.p = NULL;
+        // }
+        top->value_.p = NULL;
         top->tt_ = LUA_TNIL;
     }
 }

@@ -8,6 +8,7 @@ static int add_op(struct lua_State *L)
     int left = luaL_tointeger(L, -2);
     int right = luaL_tointeger(L, -1);
     luaL_pushinteger(L, left + right);
+    // luaD_throw(L, LUA_ERRRUN);
     return 1;
 }
 

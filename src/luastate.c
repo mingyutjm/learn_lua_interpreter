@@ -78,7 +78,7 @@ void lua_close(struct lua_State *L)
 
     // 释放CallInfo
     struct CallInfo *ci = &L1->base_ci;
-    // 不释放base_ci
+    // 不释放base_ci, 因为base_ci不是alloc出来的
     while (ci->next)
     {
         struct CallInfo *next = ci->next->next;
