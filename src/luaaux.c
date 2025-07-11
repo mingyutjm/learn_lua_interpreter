@@ -128,6 +128,11 @@ int luaL_isnil(struct lua_State *L, int idx)
     return lua_isnil(L, idx);
 }
 
+TValue *luaL_index2addr(struct lua_State *L, int idx)
+{
+    return index2addr(L, idx);
+}
+
 void luaL_pop(struct lua_State *L)
 {
     lua_pop(L);

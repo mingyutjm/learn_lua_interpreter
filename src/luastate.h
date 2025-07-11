@@ -6,7 +6,13 @@
 #define LUA_EXTRASPACE sizeof(void *)
 #define G(L) ((L)->l_G)
 
-typedef TValue* StkId;
+// GC
+#define STEPMULADJ 200
+#define GCSTEPMUL 200
+#define GCSTEPSIZE 1024 // 1kb
+#define GCPAUSE 100
+
+typedef TValue *StkId;
 
 struct CallInfo
 {
@@ -20,19 +26,26 @@ struct CallInfo
 
 typedef struct lua_State
 {
+    // CommonHeader;
+    GCObject *next;
+    lu_byte tt_;
+    lu_byte marked;
+
     StkId stack;                  // 栈
     StkId stack_last;             // 从这里开始，栈不能被使用
     StkId top;                    // 栈顶 + 1，调用函数时动态改变
     int stack_size;               // 栈的整体大小
     struct lua_longjmp *errorjmp; // 保护模式中，要用到的结构，当异常抛出时，跳出逻辑
     int status;                   // lua_State的状态
-    struct lua_State *next;       // 下一个lua_State，通常创建协程时会产生
+    // struct lua_State *next;       // 下一个lua_State，通常创建协程时会产生
     struct lua_State *previous;
     struct CallInfo base_ci;  // 和lua_State生命周期一致的函数调用信息
     struct CallInfo *ci;      // 当前运作的CallInfo
+    int nci;                  // 当前有多少个CallInfo在运作
     struct global_State *l_G; // global_State指针
     ptrdiff_t errorfunc;      // 错误函数位于栈的哪个位置
     int ncalls;               // 进行多少次函数调用
+    GCObject *gclist;         // 垃圾回收链表
 } lua_State;
 
 typedef struct global_State
@@ -50,7 +63,43 @@ typedef struct global_State
     // panic函数通常是输出一些关键日志
     lua_CFunction panic;
 
+    // gc fields
+    lu_byte gcstate;      // 垃圾回收状态
+    lu_byte currentwhite; // 当前白色标记
+    GCObject *allgc;      // 所有的垃圾回收对象
+    GCObject *gray;       // 灰色对象链表
+    GCObject *grayagain;  // 再次灰色对象链表
+    GCObject **sweepgc;   // 垃圾回收的清扫指针
+
+    // 记录开辟内存字节大小的变量之一，真实的大小是totalbytes+GCdebt。
+    lu_mem totalbytes; // 总的内存使用量
+
+    // 可以为负数的变量，主要用于控制gc触发的时机。当GCdebt>0时，才能触发gc流程。
+    l_mem GCdebt; // GCdebt will be negative
+
+    // 每次进行gc操作时，所遍历的对象字节大小之和，
+    // 单位是byte，当其值大于单步执行的内存上限时，gc终止
+    lu_mem GCmemtrav;
+
+    // 在sweep阶段结束时，会被重新计算，本质是 totalbytes + GCdebt，
+    // 它的作用是，在本轮gc结束时，将自身扩充两倍大小，
+    // 然后让真实大小减去扩充后的自己得到差debt，
+    // 然后totalbytes会等于扩充后的自己，
+    // 而GCdebt则会被负数debt赋值，就是是说下一次执行gc流程，
+    // 要在有|debt|个bytes内存被开辟后，才会开始。目的是避免gc太过频繁。
+    lu_mem GCestimate;
+
+    // GC单次处理多少字节相关的参数
+    int GCstepmul;
+
 } global_State;
+
+// GCUnion
+union GCUnion
+{
+    GCObject gc;
+    lua_State th;
+};
 
 struct lua_State *lua_newstate(lua_Alloc alloc, void *ud);
 void lua_close(struct lua_State *L);

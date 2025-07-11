@@ -2,3 +2,4 @@
 #include "luastate.c"
 #include "luaaux.c"
 #include "luado.c"
+#include "luagc.c"

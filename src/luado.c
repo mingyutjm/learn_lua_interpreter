@@ -154,11 +154,6 @@ static void reset_unuse_stack(struct lua_State *L, ptrdiff_t old_top)
     StkId top = restorestack(L, old_top);
     for (; top < L->top; top++)
     {
-        // if (top->value_.p)
-        // {
-        //     (*g->frealloc)(g->ud, top->value_.p, sizeof(top->value_.p), 0);
-        //     top->value_.p = NULL;
-        // }
         top->value_.p = NULL;
         top->tt_ = LUA_TNIL;
     }
@@ -174,23 +169,23 @@ int luaD_pcall(struct lua_State *L, Pfunc f, void *ud, ptrdiff_t oldtop, ptrdiff
     if (status != LUA_OK)
     {
         // because we have not implement gc, so we should free ci manually
-        struct global_State *g = G(L);
-        struct CallInfo *free_ci = L->ci;
-        while (free_ci)
-        {
-            if (free_ci == old_ci)
-            {
-                free_ci = free_ci->next;
-                continue;
-            }
+        // struct global_State *g = G(L);
+        // struct CallInfo *free_ci = L->ci;
+        // while (free_ci)
+        // {
+        //     if (free_ci == old_ci)
+        //     {
+        //         free_ci = free_ci->next;
+        //         continue;
+        //     }
 
-            struct CallInfo *previous = free_ci->previous;
-            previous->next = NULL;
+        //     struct CallInfo *previous = free_ci->previous;
+        //     previous->next = NULL;
 
-            struct CallInfo *next = free_ci->next;
-            (*g->frealloc)(g->ud, free_ci, sizeof(struct CallInfo), 0);
-            free_ci = next;
-        }
+        //     struct CallInfo *next = free_ci->next;
+        //     (*g->frealloc)(g->ud, free_ci, sizeof(struct CallInfo), 0);
+        //     free_ci = next;
+        // }
 
         reset_unuse_stack(L, oldtop);
         L->ci = old_ci;
@@ -338,8 +333,8 @@ int luaD_poscall(struct lua_State *L, StkId first_result, int nresult)
 
     // because we have not implement gc, so we should free ci manually
     // 释放 CallInfo 内存
-    struct global_State *g = G(L);
-    (*g->frealloc)(g->ud, ci, sizeof(struct CallInfo), 0);
+    // struct global_State *g = G(L);
+    // (*g->frealloc)(g->ud, ci, sizeof(struct CallInfo), 0);
 
     return LUA_OK;
 }

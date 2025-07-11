@@ -27,6 +27,9 @@
 // typedef uint32_t uint32;
 // typedef uint64_t uint64;
 
+#define lua_assert(c) ((void)0)
+#define check_exp(c, e) (lua_assert(c), e)
+
 // ERROR CODE
 #define LUA_OK 0
 #define LUA_ERRERR 1
@@ -60,5 +63,12 @@
 // #define savestack(L, o) ((o) - (L)->stack)
 #define diststack(L, o) ((o) - (L)->stack) // 到栈底部的距离
 #define restorestack(L, o) ((L)->stack + (o))
+
+// mem define
+typedef size_t lu_mem;
+typedef ptrdiff_t l_mem;
+
+#define MAX_LUMEM ((lu_mem)(~(lu_mem)0))
+#define MAX_LMEM (MAX_LUMEM >> 1)
 
 #endif

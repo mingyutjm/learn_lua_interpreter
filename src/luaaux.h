@@ -21,6 +21,8 @@ void *luaL_touserdata(struct lua_State *L, int idx);
 bool luaL_toboolean(struct lua_State *L, int idx);
 int luaL_isnil(struct lua_State *L, int idx);
 
+TValue* luaL_index2addr(struct lua_State* L, int idx);
+
 void luaL_pop(struct lua_State *L);
 int luaL_stacksize(struct lua_State *L);
 
