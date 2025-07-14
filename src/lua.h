@@ -66,6 +66,7 @@ typedef uint64_t u64;
 #define diststack(L, o) ((o) - (L)->stack) // 到栈底部的距离
 #define restorestack(L, o) ((L)->stack + (o))
 #define ptr2uint(p) ((uint32_t)((size_t)p & UINT_MAX))
+#define novariant(o) ((o)->tt_ & 0xf)   // 看最后四位，获取大类类型
 
 // mem define
 typedef size_t lu_mem;

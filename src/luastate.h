@@ -125,6 +125,7 @@ void setbvalue(StkId target, bool b);
 void setnilvalue(StkId target);
 void setpvalue(StkId target, void *p);
 void setobj(StkId target, StkId value);
+void setgco(StkId target, struct GCObject* gco);
 
 void increase_top(struct lua_State *L);
 void lua_pushcfunction(struct lua_State *L, lua_CFunction f);
@@ -133,14 +134,17 @@ void lua_pushnumber(struct lua_State *L, float number);
 void lua_pushboolean(struct lua_State *L, bool b);
 void lua_pushnil(struct lua_State *L);
 void lua_pushlightuserdata(struct lua_State *L, void *p);
+void lua_pushstring(struct lua_State* L, const char* str);
 
 lua_Integer lua_tointegerx(struct lua_State *L, int idx, int *isnum);
 lua_Number lua_tonumberx(struct lua_State *L, int idx, int *isnum);
 bool lua_toboolean(struct lua_State *L, int idx);
 int lua_isnil(struct lua_State *L, int idx);
+char* lua_tostring(struct lua_State* L, int idx);
 
 void lua_settop(struct lua_State *L, int idx);
 int lua_gettop(struct lua_State *L);
 void lua_pop(struct lua_State *L);
+TValue* index2addr(struct lua_State* L, int idx);
 
 #endif

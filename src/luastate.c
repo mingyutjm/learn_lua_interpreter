@@ -175,6 +175,12 @@ void setpvalue(StkId target, void *p)
     target->tt_ = LUA_TLIGHTUSERDATA;
 }
 
+void setgco(StkId target, struct GCObject *gco)
+{
+    target->value_.gc = gco;
+    target->tt_ = gco->tt_;
+}
+
 void setobj(StkId target, StkId value)
 {
     target->value_ = value->value_;
@@ -223,7 +229,16 @@ void lua_pushlightuserdata(struct lua_State *L, void *p)
     increase_top(L);
 }
 
-static TValue *index2addr(struct lua_State *L, int idx)
+void lua_pushstring(struct lua_State *L, const char *str)
+{
+    u32 l = strlen(str);
+    struct TString *ts = luaS_newlstr(L, str, l);
+    struct GCObject *gco = obj2gco(ts);
+    setgco(L->top, gco);
+    increase_top(L);
+}
+
+TValue *index2addr(struct lua_State *L, int idx)
 {
     if (idx >= 0)
     {
@@ -276,6 +291,15 @@ bool lua_toboolean(struct lua_State *L, int idx)
 {
     TValue *addr = index2addr(L, idx);
     return !(addr->tt_ == LUA_TNIL || addr->value_.b == 0);
+}
+
+char *lua_tostring(struct lua_State *L, int idx)
+{
+    TValue *addr = index2addr(L, idx);
+    if (novariant(addr) != LUA_TSTRING)
+        return NULL;
+    struct TString *ts = gco2ts(addr->value_.gc);
+    return getstr(ts);
 }
 
 int lua_isnil(struct lua_State *L, int idx)

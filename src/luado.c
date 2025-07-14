@@ -119,8 +119,18 @@ static struct CallInfo *next_ci(struct lua_State *L, StkId func, int nresult)
 {
     struct global_State *g = G(L);
     struct CallInfo *ci;
-    ci = luaM_realloc(L, NULL, 0, sizeof(struct CallInfo));
-    ci->next = NULL;
+
+    if (L->ci->next)
+    {
+        ci = L->ci->next;
+    }
+    else
+    {
+        ci = luaM_realloc(L, NULL, 0, sizeof(struct CallInfo));
+        ci->next = NULL;
+        L->nci++;
+    }
+
     ci->previous = L->ci;
     L->ci->next = ci;
     ci->nresult = nresult;
@@ -330,6 +340,7 @@ int luaD_poscall(struct lua_State *L, StkId first_result, int nresult)
     struct CallInfo *ci = L->ci;
     L->ci = ci->previous;
     L->ci->next = NULL;
+    L->nci--;
 
     // because we have not implement gc, so we should free ci manually
     // 释放 CallInfo 内存

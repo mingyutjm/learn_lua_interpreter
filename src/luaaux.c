@@ -20,8 +20,8 @@ static void *l_alloc(void *ud, void *ptr, size_t osize, size_t nsize)
     }
 
     void *newptr = realloc(ptr, nsize);
-    // if (newptr)
-    //     memset(newptr, 0, nsize); // 全部置零
+    if (newptr && !ptr)
+        memset(newptr, 0, nsize); // 全部置零
     return newptr;
 }
 
@@ -64,6 +64,11 @@ void luaL_pushcfunction(struct lua_State *L, lua_CFunction f)
 void luaL_pushboolean(struct lua_State *L, bool boolean)
 {
     lua_pushboolean(L, boolean);
+}
+
+void luaL_pushstring(struct lua_State *L, const char *str)
+{
+    lua_pushstring(L, str);
 }
 
 static int f_call(lua_State *L, void *ud)
@@ -121,6 +126,11 @@ void *luaL_touserdata(struct lua_State *L, int idx)
 bool luaL_toboolean(struct lua_State *L, int idx)
 {
     return lua_toboolean(L, idx);
+}
+
+char *luaL_tostring(struct lua_State *L, int idx)
+{
+    return lua_tostring(L, idx);
 }
 
 int luaL_isnil(struct lua_State *L, int idx)

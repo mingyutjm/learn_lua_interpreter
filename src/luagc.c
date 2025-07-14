@@ -63,17 +63,22 @@ static void propagatemark(struct lua_State *L)
     {
     case LUA_TTHREAD:
     {
+        // struct lua_State *th = gco2th(gco);
+        //// 把th从g->gray上摘下
+        // g->gray = th->gclist;
+        //// atomic状态下不再加入grayagain
+        // if (g->gcstate != GCSinsideatomic)
+        //{
+        //     black2gray(gco);
+        //     // 放入g->grayagain
+        //     linkgclist(th, g->grayagain);
+        // }
+        //// 遍历th的栈, 标记栈中用到的值为灰色
+        // size = traversethread(L, th);
+        black2gray(gco);
         struct lua_State *th = gco2th(gco);
-        // 把th从g->gray上摘下
         g->gray = th->gclist;
-        // atomic状态下不再加入grayagain
-        if (g->gcstate != GCSinsideatomic)
-        {
-            black2gray(gco);
-            // 放入g->grayagain
-            linkgclist(th, g->grayagain);
-        }
-        // 遍历th的栈, 标记栈中用到的值为灰色
+        linkgclist(th, g->grayagain);
         size = traversethread(L, th);
     }
     break;
@@ -102,7 +107,7 @@ static lu_mem freeobj(struct lua_State *L, struct GCObject *gco)
         struct TString *ts = gco2ts(gco);
         luaS_remove(L, ts);
         lu_mem sz = sizelstring(ts->shrlen);
-        luaM_free(L, gco, sz);
+        luaM_free(L, ts, sz);
         return sz;
     }
     break;
@@ -110,7 +115,7 @@ static lu_mem freeobj(struct lua_State *L, struct GCObject *gco)
     {
         struct TString *ts = gco2ts(gco);
         lu_mem sz = sizelstring(ts->u.lnglen);
-        luaM_free(L, gco, sz);
+        luaM_free(L, ts, sz);
         return sz;
     }
     break;
@@ -251,6 +256,10 @@ static lu_mem singlestep(struct lua_State *L)
     {
         g->GCmemtrav = 0;
         sweepstep(L);
+        if (g->GCmemtrav < 2000)
+        {
+            printf("1");
+        }
         return g->GCmemtrav;
     }
     break;
