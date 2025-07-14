@@ -18,7 +18,7 @@ static l_mem getdebt(struct lua_State *L)
     if (debt <= 0)
         return 0;
 
-    debt = debt / STEPMULADJ + 1;
+    debt = debt / STEPMULADJ + 1; // 除200再向上取整
     debt = debt >= (MAX_LMEM / STEPMULADJ) ? MAX_LMEM : debt * g->GCstepmul;
     return debt;
 }
@@ -178,8 +178,11 @@ static void setpause(struct lua_State *L)
 {
     struct global_State *g = G(L);
     l_mem estimate = g->GCestimate / GCPAUSE;
-    // min(MAX_LMEM, estimate * g->GCstepmul)
+    // 这里estimate = g->GCestimate * g->GCstepmul / GCPAUSE 
+    // 相当于 g->GCestimate * 2
     estimate = min(MAX_LMEM, estimate * g->GCstepmul);
+    // 然后算出debt, = -g->GCestimate
+    // 也就是说，下次内存达到上次gc后的内存的两倍时，才会发生gc，也就是又申请了一倍的内存后才会gc
     l_mem debt = g->GCestimate - estimate;
     setdebt(L, debt);
 }
@@ -293,12 +296,14 @@ void luaC_step(struct lua_State *L)
     {
         l_mem work = singlestep(L);
         debt -= work;
-    } while (debt > -GCSTEPSIZE && G(L)->gcstate != GCSpause);
+    } while (debt > -GCSTEPSIZE && G(L)->gcstate != GCSpause); // 处理至多debt+GCSTEPSIZE个字节的数据
 
+    // 一轮gc已经完整执行完毕
     if (G(L)->gcstate == GCSpause)
     {
         setpause(L);
     }
+    // 还没执行完gc
     else
     {
         debt = debt / g->GCstepmul * STEPMULADJ;

@@ -81,12 +81,7 @@ typedef struct global_State
     // 单位是byte，当其值大于单步执行的内存上限时，gc终止
     lu_mem GCmemtrav;
 
-    // 在sweep阶段结束时，会被重新计算，本质是 totalbytes + GCdebt，
-    // 它的作用是，在本轮gc结束时，将自身扩充两倍大小，
-    // 然后让真实大小减去扩充后的自己得到差debt，
-    // 然后totalbytes会等于扩充后的自己，
-    // 而GCdebt则会被负数debt赋值，就是是说下一次执行gc流程，
-    // 要在有|debt|个bytes内存被开辟后，才会开始。目的是避免gc太过频繁。
+    // gc后的内存使用估计量
     lu_mem GCestimate;
 
     // GC单次处理多少字节相关的参数
