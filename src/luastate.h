@@ -12,6 +12,10 @@
 #define GCSTEPSIZE 1024 // 1kb
 #define GCPAUSE 100
 
+// String
+#define STRCACHE_M 53
+#define STRCACHE_N 2
+
 typedef TValue *StkId;
 
 struct CallInfo
@@ -22,6 +26,14 @@ struct CallInfo
     int callstatus;            // 调用状态
     struct CallInfo *next;     // 下一个调用
     struct CallInfo *previous; // 上一个调用
+};
+
+// 短字符串全局表
+struct stringtable
+{
+    struct TString **hash; // TString*数组
+    u32 nuse;              // hash表中有多少个元素
+    u32 size;              // hash表的大小
 };
 
 typedef struct lua_State
@@ -63,6 +75,11 @@ typedef struct global_State
     // panic函数通常是输出一些关键日志
     lua_CFunction panic;
 
+    struct stringtable strt; // 短字符串全局表
+    TString *strcache[STRCACHE_M][STRCACHE_N];
+    u32 seed;           // hash随机数种子
+    TString *memerrmsg; // 内存分配错误时的错误信息
+
     // gc fields
     lu_byte gcstate;      // 垃圾回收状态
     lu_byte currentwhite; // 当前白色标记
@@ -70,6 +87,7 @@ typedef struct global_State
     GCObject *gray;       // 灰色对象链表
     GCObject *grayagain;  // 再次灰色对象链表
     GCObject **sweepgc;   // 垃圾回收的清扫指针
+    GCObject *fixgc;      // 固定的，不被垃圾收集
 
     // 记录开辟内存字节大小的变量之一，真实的大小是totalbytes+GCdebt。
     lu_mem totalbytes; // 总的内存使用量
@@ -94,6 +112,7 @@ union GCUnion
 {
     GCObject gc;
     lua_State th;
+    TString ts;
 };
 
 struct lua_State *lua_newstate(lua_Alloc alloc, void *ud);

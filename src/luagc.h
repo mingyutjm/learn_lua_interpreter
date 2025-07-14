@@ -34,12 +34,16 @@
 #define iswhite(o) testbits((o)->marked, WHITEBITS)
 #define isgray(o) (!testbits((o)->marked, bitmask(BLACKBIT) | WHITEBITS)) // 不是白色也不是黑色，就是全0
 #define isblack(o) testbit((o)->marked, bitmask(BLACKBIT))
-#define isdeadm(ow, m) (((m ^ WHITEBITS) & (ow)) == 0)  // mark是否和ow的颜色一样(只看白色位)
+#define isdeadm(ow, m) (((m ^ WHITEBITS) & (ow)) == 0)   // mark是否和ow的颜色一样(只看白色位)
+#define isdead(g, o) isdeadm(otherwhite(g), (o)->marked) // g(global_state), o(GCObject)
+#define changewhite(o) ((o)->marked ^= WHITEBITS)        // 切换到otherwhite(如果本来是白色的话)
 
 // o必须是GCObject，或者第一个成员必须是GCObject
 #define obj2gco(o) (&cast(union GCUnion *, o)->gc)
 // th (thread), o必须是lua_State或者第一个成员必须是lua_State
 #define gco2th(o) check_exp((o)->tt_ == LUA_TTHREAD, &cast(union GCUnion *, o)->th)
+// o必须是一个TString
+#define gco2ts(o) check_exp((o)->tt_ == LUA_SHRSTR || (o)->tt_ == LUA_LNGSTR, &cast(union GCUnion *, o)->ts)
 // o必须是GCObject，或者第一个成员必须是GCObject
 #define gcvalue(o) ((o)->value_.gc)
 
@@ -84,6 +88,7 @@
 //
 GCObject *luaC_newobj(struct lua_State *L, int tt_, size_t size);
 void luaC_step(struct lua_State *L);
+void luaC_fix(struct lua_State *L, struct GCObject *o); // GCObject can not collect
 void reallymarkobject(struct lua_State *L, struct GCObject *gco);
 void luaC_freeallobjects(struct lua_State *L);
 

@@ -1,6 +1,7 @@
 #include "luastate.h"
 #include "luamem.h"
 #include "luagc.h"
+#include "luastring.h"
 
 // 先把L转换成 byte*, 然后减去L在LX中的偏移量，得到LX的指针，就相当于LG指针
 #define fromstate(L) (cast(LG *, cast(lu_byte *, (L)) - offsetof(LX, l)))
@@ -50,6 +51,24 @@ static void free_stack(struct lua_State *L)
     L->stack_size = 0;
 }
 
+#define addbuff(b, t, p)         \
+    {                            \
+        memcpy(b, t, sizeof(t)); \
+        p += sizeof(t);          \
+    }
+
+static u32 makeseed(struct lua_State *L)
+{
+    char buff[4 * sizeof(size_t)];
+    u32 h = time(NULL);
+    int p = 0;
+    addbuff(buff, L, p);
+    addbuff(buff, &h, p);
+    addbuff(buff, luaO_nilobject, p);
+    addbuff(buff, &lua_newstate, p);
+    return luaS_hash(L, buff, p, h);
+}
+
 struct lua_State *lua_newstate(lua_Alloc alloc, void *ud)
 {
     struct global_State *g;
@@ -65,9 +84,13 @@ struct lua_State *lua_newstate(lua_Alloc alloc, void *ud)
     g->panic = NULL;
 
     L = &(lg->l.l);
+    L->tt_ = LUA_TTHREAD;
     L->nci = 0;
     G(L) = g; // L->l_G = g;
     g->mainthread = L;
+
+    // string seed
+    g->seed = makeseed(L);
 
     // gc init
     g->gcstate = GCSpause;
@@ -77,15 +100,17 @@ struct lua_State *lua_newstate(lua_Alloc alloc, void *ud)
     g->gray = NULL;
     g->grayagain = NULL;
     g->sweepgc = NULL;
+    g->fixgc = NULL;
     g->GCdebt = 0;
     g->GCmemtrav = 0;
     g->GCestimate = 0;
     g->GCstepmul = LUA_GCSTEPMUL;
     L->marked = luaC_white(g);
     L->gclist = NULL;
-    L->tt_ = LUA_TTHREAD;
 
     stack_init(L);
+
+    luaS_init(L);
 
     return L;
 }

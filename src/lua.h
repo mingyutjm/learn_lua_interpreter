@@ -9,6 +9,8 @@
 #include <stddef.h>
 #include <assert.h>
 #include <stdint.h>
+#include <time.h>
+#include <limits.h>
 
 #if defined(LLONG_MAX)
 #define LUA_INTEGER long long
@@ -18,14 +20,14 @@
 #define LUA_NUMBER float
 #endif
 
-// typedef int8_t int8;
-// typedef int16_t int16;
-// typedef int32_t int32;
-// typedef int64_t int64;
-// typedef uint8_t uint8;
-// typedef uint16_t uint16;
-// typedef uint32_t uint32;
-// typedef uint64_t uint64;
+typedef int8_t i8;
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
 
 #define lua_assert(c) ((void)0)
 #define check_exp(c, e) (lua_assert(c), e)
@@ -63,6 +65,7 @@
 // #define savestack(L, o) ((o) - (L)->stack)
 #define diststack(L, o) ((o) - (L)->stack) // 到栈底部的距离
 #define restorestack(L, o) ((L)->stack + (o))
+#define ptr2uint(p) ((uint32_t)((size_t)p & UINT_MAX))
 
 // mem define
 typedef size_t lu_mem;

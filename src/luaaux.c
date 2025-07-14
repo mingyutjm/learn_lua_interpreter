@@ -20,8 +20,8 @@ static void *l_alloc(void *ud, void *ptr, size_t osize, size_t nsize)
     }
 
     void *newptr = realloc(ptr, nsize);
-    if (newptr)
-        memset(newptr, 0, nsize); // 全部置零
+    // if (newptr)
+    //     memset(newptr, 0, nsize); // 全部置零
     return newptr;
 }
 

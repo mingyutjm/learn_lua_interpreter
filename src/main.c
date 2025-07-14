@@ -1,6 +1,5 @@
 // #include "luaaux.h"
 #include "unity.c"
-#include <time.h>
 
 // \src\luaaux.c ..\src\luado.c ..\src\luamem.c ..\src\luastate.c
 

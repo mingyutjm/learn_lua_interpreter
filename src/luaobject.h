@@ -34,6 +34,9 @@ typedef void *(*lua_Alloc)(void *ud, void *ptr, size_t osize, size_t nsize);
     lu_byte marked
 #define LUA_GCSTEPMUL 200
 
+#define luaO_nilobject (&luaO_nilobject_)
+#define MAXSHORTSTR 40
+
 typedef struct GCObject
 {
     CommonHeader; // 通用头部
@@ -57,10 +60,24 @@ typedef struct lua_TValue
     int tt_;
 } TValue;
 
+const TValue luaO_nilobject_;
+
 // Lua字符串类型
 typedef struct TString
 {
     CommonHeader;
+    u32 hash;
+
+    // 长字符串时, 0 表示字符串未进行hash，1表示已经经过hash
+    // 短字符串时，0 表示需要被gc托管(普通字符串），1表示不会被gc回收(关键字)
+    u16 extra;
+    u16 shrlen; // 短字符串的长度
+    union
+    {
+        struct TString *hnext; // 只对短字符串有效，发生hash冲突时，指向下一个短字符串
+        size_t lnglen;         // 长字符串的长度
+    } u;
+    char data[0];
 } TString;
 
 #endif

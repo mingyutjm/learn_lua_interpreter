@@ -1,5 +1,6 @@
 #include "luagc.h"
 #include "luamem.h"
+#include "luastring.h"
 
 #define GCMAXSWEEPGCO 25
 
@@ -96,9 +97,19 @@ static lu_mem freeobj(struct lua_State *L, struct GCObject *gco)
 {
     switch (gco->tt_)
     {
-    case LUA_TSTRING:
+    case LUA_SHRSTR:
     {
-        lu_mem sz = sizeof(TString);
+        struct TString *ts = gco2ts(gco);
+        luaS_remove(L, ts);
+        lu_mem sz = sizelstring(ts->shrlen);
+        luaM_free(L, gco, sz);
+        return sz;
+    }
+    break;
+    case LUA_LNGSTR:
+    {
+        struct TString *ts = gco2ts(gco);
+        lu_mem sz = sizelstring(ts->u.lnglen);
         luaM_free(L, gco, sz);
         return sz;
     }
@@ -121,6 +132,9 @@ static void atomic(struct lua_State *L)
     g->gcstate = GCSinsideatomic;
     propagateall(L);
     g->currentwhite = otherwhite(g);
+
+    // 在释放前，清空缓存
+    luaS_clearcache(L);
 }
 
 static struct GCObject **sweeplist(struct lua_State *L, struct GCObject **p, size_t count)
@@ -140,7 +154,7 @@ static struct GCObject **sweeplist(struct lua_State *L, struct GCObject **p, siz
         }
         else
         {
-            // 后三位置0 （颜色位置0）
+            // 后三位 置0 （颜色位 置0）
             (*p)->marked &= cast(lu_byte, ~(bitmask(BLACKBIT) | WHITEBITS));
             // 重新标记为新白色
             (*p)->marked |= luaC_white(g);
@@ -178,7 +192,7 @@ static void setpause(struct lua_State *L)
 {
     struct global_State *g = G(L);
     l_mem estimate = g->GCestimate / GCPAUSE;
-    // 这里estimate = g->GCestimate * g->GCstepmul / GCPAUSE 
+    // 这里estimate = g->GCestimate * g->GCstepmul / GCPAUSE
     // 相当于 g->GCestimate * 2
     estimate = min(MAX_LMEM, estimate * g->GCstepmul);
     // 然后算出debt, = -g->GCestimate
@@ -277,10 +291,18 @@ void reallymarkobject(struct lua_State *L, struct GCObject *gco)
         linkgclist(gco2th(gco), g->gray);
     }
     break;
-    case LUA_TSTRING:
-    { // just for gc test now
+    case LUA_SHRSTR:
+    {
         gray2black(gco);
-        g->GCmemtrav += sizeof(struct TString);
+        struct TString *ts = gco2ts(gco);
+        g->GCmemtrav += sizelstring(ts->shrlen);
+    }
+    break;
+    case LUA_LNGSTR:
+    {
+        gray2black(gco);
+        struct TString *ts = gco2ts(gco);
+        g->GCmemtrav += sizelstring(ts->u.lnglen);
     }
     break;
     default:
@@ -311,9 +333,22 @@ void luaC_step(struct lua_State *L)
     }
 }
 
+void luaC_fix(struct lua_State *L, struct GCObject *o)
+{
+    struct global_State *g = G(L);
+    lua_assert(g->allgc == o);
+
+    g->allgc = g->allgc->next;
+    // 头插
+    o->next = g->fixgc;
+    g->fixgc = o;
+    white2gray(o);
+}
+
 void luaC_freeallobjects(struct lua_State *L)
 {
     struct global_State *g = G(L);
     g->currentwhite = WHITEBITS; // all gc objects must reclaim
     sweepwholelist(L, &g->allgc);
+    sweepwholelist(L, &g->fixgc);
 }
